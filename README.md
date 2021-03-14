@@ -1,1 +1,1 @@
-# ComputerGraphics-lab1
+# Basic image processing techniques
