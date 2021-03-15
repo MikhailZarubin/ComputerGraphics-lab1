@@ -3,17 +3,27 @@
 #include<cmath>
 #include<algorithm>
 #include<vector>
+template<class T, class T2>
+T max(T2 a, T b)
+{
+	return a > b ? a : b;
+}
+template <class T, class T2>
+T min(T2 a, T b)
+{
+	return a < b ? a : b;
+}
 float limit_color(float color)
 {
-	if (color < 0.f)
+	if (color <= 0.f)
 		return 0.f;
-	if (color > 255.f)
+	if (color >= 255.f)
 		return 255.f;
 	return color;
 }
 int limit_pixel(int pix, int x)
 {
-	if (pix < 0)
+	if (pix <= 0)
 		return 0;
 	if (pix >= x)
 		return x - 1;
@@ -61,8 +71,6 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 				norm += matrix[i][j];
 			}
 		}
-		if (!norm)
-			norm = 1.f;
 	}
 	else
 	{
@@ -82,6 +90,26 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 			}
 			norm = 1.0;
 		}
+		if (name_filt == "motion_blur")
+		{
+			n = motion_blur;
+			m = motion_blur;
+			matrix = new float* [n];
+			for (int i = 0; i < n; i++)
+			{
+				matrix[i] = new float[m];
+				for (int j = 0; j < m; j++)
+				{
+					if (i != j)
+						matrix[i][j] = 0;
+					else
+					{
+						matrix[i][j] = 1.f;
+						norm += matrix[i][j];
+					}
+				}
+			}
+		}
 		if (name_filt == "Gauss")
 		{
 			n = GAUSS_SIZE;
@@ -99,6 +127,8 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 			}
 		}
 	}
+	if (!norm)
+		norm = 1.f;
 	for (int x = 0; x < res.width(); x++)
 	{
 		for (int y = 0; y < res.height(); y++)
@@ -230,9 +260,9 @@ QImage dilation(const QImage& image)
 				for (int j = 0; j < med; j++)
 				{
 					x_pix = limit_pixel(x - med / 2 + j, res.width());
-					red = std::max(red, image.pixelColor(x_pix, y_pix).red());
-					green = std::max(green, image.pixelColor(x_pix, y_pix).green());
-					blue = std::max(blue, image.pixelColor(x_pix, y_pix).blue());
+					red = max(red, image.pixelColor(x_pix, y_pix).red());
+					green = max(green, image.pixelColor(x_pix, y_pix).green());
+					blue = max(blue, image.pixelColor(x_pix, y_pix).blue());
 				}
 			}
 			QColor new_color;
@@ -258,13 +288,121 @@ QImage erosion(const QImage& image)
 				for (int j = 0; j < med; j++)
 				{
 					x_pix = limit_pixel(x - med / 2 + j, res.width());
-					red = std::min(red, image.pixelColor(x_pix, y_pix).red());
-					green = std::min(green, image.pixelColor(x_pix, y_pix).green());
-					blue = std::min(blue, image.pixelColor(x_pix, y_pix).blue());
+					red = min(red, image.pixelColor(x_pix, y_pix).red());
+					green = min(green, image.pixelColor(x_pix, y_pix).green());
+					blue = min(blue, image.pixelColor(x_pix, y_pix).blue());
 				}
 			}
 			QColor new_color;
 			new_color.setRgb(red, green, blue);
+			res.setPixelColor(x, y, new_color);
+		}
+	}
+	return res;
+}
+QImage waves(const QImage& image)
+{
+	QImage res = image;
+	for (int k = 0; k < res.width(); k++)
+	{
+		for (int l = 0; l < res.height(); l++)
+		{
+			int y_pix = l;
+			int x_pix = limit_pixel(k + 20 * sin(2 * PI * l / 60), image.width());
+			QColor new_color;
+			new_color.setRgb(image.pixelColor(x_pix, y_pix).red(), image.pixelColor(x_pix, y_pix).green(), image.pixelColor(x_pix, y_pix).blue());
+			res.setPixelColor(k, l, new_color);
+		}
+	}
+	return res;
+}
+QImage transfer(const QImage& image)
+{
+	QImage res = image;
+	for (int k = 0; k < res.width(); k++)
+	{
+		for (int l = 0; l < res.height(); l++)
+		{
+			int x_pix = k + 100;
+			int y_pix = l;
+			QColor new_color;
+			if (x_pix >= image.width())
+			new_color.setRgb(0, 0, 0);
+			else
+			new_color.setRgb(image.pixelColor(x_pix, y_pix).red(), image.pixelColor(x_pix, y_pix).green(), image.pixelColor(x_pix, y_pix).blue());
+			res.setPixelColor(k, l, new_color);
+		}
+	}
+	return res;
+}
+QImage turn(const QImage& image)
+{
+	QImage res = image;
+	int x0 = res.width() / 2;
+	int y0 = res.height() / 2;
+	for (int k = 0; k < res.width(); k++)
+	{
+		for (int l = 0; l < res.height(); l++)
+		{
+			int x_pix = (k - x0) * cos(45) - (l - y0) * sin(45) + x0;
+			int y_pix = (k - x0) * sin(45) + (l - y0) * cos(45) + y0;
+			QColor new_color;
+			if (x_pix >= image.width() || y_pix >= image.height() || x_pix < 0 || y_pix < 0)
+				new_color.setRgb(0, 0, 0);
+			else
+				new_color.setRgb(image.pixelColor(x_pix, y_pix).red(), image.pixelColor(x_pix, y_pix).green(), image.pixelColor(x_pix, y_pix).blue());
+			res.setPixelColor(k, l, new_color);
+		}
+	}
+	return res;
+}
+QImage lin_gist(const QImage& image)
+{
+	QImage res = image;
+	int rMax = 0, gMax = 0, bMax = 0;
+	int rMin = 255, gMin = 255, bMin = 255;
+	for (int x = 0; x < res.width(); x++)
+	{
+		for (int y = 0; y < res.height(); y++)
+		{
+			rMax = max(rMax, image.pixelColor(x, y).red());
+			gMax = max(gMax, image.pixelColor(x, y).green());
+			bMax = max(bMax, image.pixelColor(x, y).blue());
+			rMin = min(rMin, image.pixelColor(x, y).red());
+			gMin = min(gMin, image.pixelColor(x, y).green());
+			bMin = min(bMin, image.pixelColor(x, y).blue());
+		}
+	}
+	for (int x = 0; x < res.width(); x++)
+	{
+		for (int y = 0; y < res.height(); y++)
+		{
+			QColor new_color;
+			new_color.setRgb((image.pixelColor(x, y).red() - rMin) * 255 / (rMax - rMin), (image.pixelColor(x, y).green() - gMin) * 255 / (gMax - gMin), (image.pixelColor(x, y).blue() - bMin) * 255 / (bMax - bMin));
+			res.setPixelColor(x, y, new_color);
+		}
+	}
+	return res;
+}
+QImage perfect_refl(const QImage& image)
+{
+	QImage res = image;
+	int rMax = 0, gMax = 0, bMax = 0;
+	for (int x = 0; x < res.width(); x++)
+	{
+		for (int y = 0; y < res.height(); y++)
+		{
+			rMax = max(rMax, image.pixelColor(x, y).red());
+			gMax = max(gMax, image.pixelColor(x, y).green());
+			bMax = max(bMax, image.pixelColor(x, y).blue());
+		}
+	}
+	for (int x = 0; x < res.width(); x++)
+	{
+		for (int y = 0; y < res.height(); y++)
+		{
+			QColor new_color;
+			new_color.setRgb(image.pixelColor(x, y).red() * 255 / rMax, image.pixelColor(x, y).green() * 255 / gMax, image.pixelColor(x, y).blue() * 255 / bMax);
 			res.setPixelColor(x, y, new_color);
 		}
 	}
