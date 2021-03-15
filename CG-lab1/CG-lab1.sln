@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30717.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CG-lab1", "CG-lab1.vcxproj", "{40EFDFFA-E416-4B2C-A461-6E357F21D37D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{40EFDFFA-E416-4B2C-A461-6E357F21D37D}.Debug|x64.ActiveCfg = Debug|x64
+		{40EFDFFA-E416-4B2C-A461-6E357F21D37D}.Debug|x64.Build.0 = Debug|x64
+		{40EFDFFA-E416-4B2C-A461-6E357F21D37D}.Debug|x86.ActiveCfg = Debug|x64
+		{40EFDFFA-E416-4B2C-A461-6E357F21D37D}.Release|x64.ActiveCfg = Release|x64
+		{40EFDFFA-E416-4B2C-A461-6E357F21D37D}.Release|x64.Build.0 = Release|x64
+		{40EFDFFA-E416-4B2C-A461-6E357F21D37D}.Release|x86.ActiveCfg = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {95795772-F3BB-4856-80C6-D44B00CAE7E2}
+	EndGlobalSection
+EndGlobal
