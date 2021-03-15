@@ -7,7 +7,7 @@ const int GAUSS_SIZE = 7;
 const float sigma = 2.f;
 const float sephia = 15.f;
 const float brightness = 50.f;
-const int med = 7;
+const int med = 3;
 float limit_color(float color);
 int limit_pixel(int pix, int x);
 QImage invers(const QImage& im);

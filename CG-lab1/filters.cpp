@@ -3,7 +3,6 @@
 #include<cmath>
 #include<algorithm>
 #include<vector>
-#include<omp.h>
 float limit_color(float color)
 {
 	if (color < 0.f)
@@ -27,7 +26,7 @@ QImage invers(const QImage& image)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
-			QColor col = res.pixelColor(x, y);
+			QColor col = image.pixelColor(x, y);
 			col.setRgb(255 - col.red(), 255 - col.green(), 255 - col.blue());
 			res.setPixelColor(x,y,col);
 		}
@@ -100,34 +99,23 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 			}
 		}
 	}
-	std::pair<int, int> center;
-	center.first = n / 2;
-	center.second = m / 2;
 	for (int x = 0; x < res.width(); x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
-			std::pair<int, int> tmp;
-			tmp.first = x - center.first;
-			tmp.second = y - center.second;
-			int x_pix = limit_pixel(tmp.first, res.width());
-			int y_pix = limit_pixel(tmp.second, res.height());
+			int x_pix = limit_pixel(x-n/2, res.width());
+			int y_pix = limit_pixel(y-m/2, res.height());
 			float red = 0, green = 0, blue = 0;
 			for (int i = 0; i < n; i++)
 			{
+				y_pix = limit_pixel(y - n / 2 + i, res.height());
 				for (int j = 0; j < m; j++)
 				{
-					QColor col = image.pixelColor(x_pix, y_pix);
-					red += col.red() * matrix[i][j];
-					green += col.green() * matrix[i][j];
-					blue += col.blue() * matrix[i][j];
-					++tmp.second;
-					y_pix = limit_pixel(tmp.second, res.height());
+					x_pix = limit_pixel(x - m / 2 + j, res.width());
+					red += image.pixelColor(x_pix, y_pix).red() * matrix[i][j];
+					green += image.pixelColor(x_pix, y_pix).green() * matrix[i][j];
+					blue += image.pixelColor(x_pix, y_pix).blue() * matrix[i][j];
 				}
-				tmp.second -= m;
-				++tmp.first;
-				x_pix = limit_pixel(tmp.first, res.width());
-				y_pix = limit_pixel(tmp.second, res.height());
 			}
 			red /= norm;
 			green /= norm;
@@ -152,7 +140,7 @@ QImage GrayScale(const QImage& image)
 		for (int y = 0; y < res.height(); y++)
 		{
 			QColor new_color;
-			float intensity = res.pixelColor(x, y).red() * 0.299 + res.pixelColor(x, y).blue() * 0.114 + res.pixelColor(x, y).green() * 0.587;
+			float intensity = image.pixelColor(x, y).red() * 0.299 + image.pixelColor(x, y).blue() * 0.114 + image.pixelColor(x, y).green() * 0.587;
 			intensity = limit_color(intensity);
 			new_color.setRgb(intensity, intensity, intensity);
 			res.setPixelColor(x, y, new_color);
@@ -168,7 +156,7 @@ QImage Sephia(const QImage& image)
 		for (int y = 0; y < res.height(); y++)
 		{
 			QColor new_color;
-			float intensity = res.pixelColor(x, y).red() * 0.299 + res.pixelColor(x, y).blue() * 0.114 + res.pixelColor(x, y).green() * 0.587;
+			float intensity = image.pixelColor(x, y).red() * 0.299 + image.pixelColor(x, y).blue() * 0.114 + image.pixelColor(x, y).green() * 0.587;
 			new_color.setRgb(limit_color(intensity + 2 * sephia), limit_color(intensity + 0.5 * sephia), limit_color(intensity - sephia));
 			res.setPixelColor(x, y, new_color);
 		}
@@ -183,11 +171,11 @@ QImage Brigntness(const QImage& image)
 		for (int y = 0; y < res.height(); y++)
 		{
 			QColor new_color;
-			float red = res.pixelColor(x, y).red() + brightness;
+			float red = image.pixelColor(x, y).red() + brightness;
 			red = limit_color(red);
-			float green= res.pixelColor(x, y).green() + brightness;
+			float green= image.pixelColor(x, y).green() + brightness;
 			green = limit_color(green);
-			float blue = res.pixelColor(x, y).blue() + brightness;
+			float blue = image.pixelColor(x, y).blue() + brightness;
 			blue = limit_color(blue);
 			new_color.setRgb(red, green, blue);
 			res.setPixelColor(x, y, new_color);
@@ -207,10 +195,10 @@ QImage median(const QImage& image)
 			std::vector<float> red, green, blue;
 			for (int i = 0; i < med; i++)
 			{
-				x_pix = limit_pixel(x - med / 2 + i, res.width());
+				y_pix = limit_pixel(y - med / 2 + i, res.height());
 				for (int j = 0; j < med; j++)
 				{
-					y_pix = limit_pixel(y - med / 2 + j, res.height());
+					x_pix = limit_pixel(x - med / 2 + j, res.width());
 					red.push_back(image.pixelColor(x_pix, y_pix).red());
 					blue.push_back(image.pixelColor(x_pix, y_pix).blue());
 					green.push_back(image.pixelColor(x_pix, y_pix).green());
@@ -238,13 +226,13 @@ QImage dilation(const QImage& image)
 			int red = 0, green = 0, blue = 0;
 			for (int i = 0; i < med; i++)
 			{
-				x_pix = limit_pixel(x - med / 2 + i, res.width());
+				y_pix = limit_pixel(y - med / 2 + i, res.height());				
 				for (int j = 0; j < med; j++)
 				{
-					y_pix = limit_pixel(y - med / 2 + j, res.height());
-					red = std::max(red, res.pixelColor(x_pix, y_pix).red());
-					green = std::max(green, res.pixelColor(x_pix, y_pix).green());
-					blue = std::max(blue, res.pixelColor(x_pix, y_pix).blue());
+					x_pix = limit_pixel(x - med / 2 + j, res.width());
+					red = std::max(red, image.pixelColor(x_pix, y_pix).red());
+					green = std::max(green, image.pixelColor(x_pix, y_pix).green());
+					blue = std::max(blue, image.pixelColor(x_pix, y_pix).blue());
 				}
 			}
 			QColor new_color;
@@ -266,13 +254,13 @@ QImage erosion(const QImage& image)
 			int red = 255, green = 255, blue = 255;
 			for (int i = 0; i < med; i++)
 			{
-				x_pix = limit_pixel(x - med / 2 + i, res.width());
+				y_pix = limit_pixel(y - med / 2 + i, res.height());
 				for (int j = 0; j < med; j++)
 				{
-					y_pix = limit_pixel(y - med / 2 + j, res.height());
-					red = std::min(red, res.pixelColor(x_pix, y_pix).red());
-					green = std::min(green, res.pixelColor(x_pix, y_pix).green());
-					blue = std::min(blue, res.pixelColor(x_pix, y_pix).blue());
+					x_pix = limit_pixel(x - med / 2 + j, res.width());
+					red = std::min(red, image.pixelColor(x_pix, y_pix).red());
+					green = std::min(green, image.pixelColor(x_pix, y_pix).green());
+					blue = std::min(blue, image.pixelColor(x_pix, y_pix).blue());
 				}
 			}
 			QColor new_color;
