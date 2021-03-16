@@ -32,13 +32,13 @@ int limit_pixel(int pix, int x)
 QImage invers(const QImage& image)
 {
 	QImage res = image;
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
 			QColor col = image.pixelColor(x, y);
 			col.setRgb(255 - col.red(), 255 - col.green(), 255 - col.blue());
-			res.setPixelColor(x,y,col);
+			res.setPixelColor(x, y, col);
 		}
 	}
 	return res;
@@ -71,6 +71,16 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 				norm += matrix[i][j];
 			}
 		}
+		if (norm != 0 && norm != 1)
+		{
+			for (int i = 0; i < n; i++)
+			{
+				for (int j = 0; j < m; j++)
+				{
+					matrix[i][j] /= norm;
+				}
+			}
+		}
 	}
 	else
 	{
@@ -88,7 +98,6 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 					matrix[i][j] = 1.0 / norm;
 				}
 			}
-			norm = 1.0;
 		}
 		if (name_filt == "motion_blur")
 		{
@@ -104,8 +113,7 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 						matrix[i][j] = 0;
 					else
 					{
-						matrix[i][j] = 1.f;
-						norm += matrix[i][j];
+						matrix[i][j] = 1.f / n;
 					}
 				}
 			}
@@ -120,21 +128,28 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 				matrix[i] = new float[m];
 				for (int j = 0; j < m; j++)
 				{
-					float tmp = -1.f * (i - n / 2) * (i - n / 2) + (j - m / 2) * (j - m / 2);
-					matrix[i][j] = std::exp( tmp / (sigma * sigma));
+					matrix[i][j] = exp(-((i - n / 2) * (i - n / 2) + (j - m / 2) * (j - m / 2)) / (2 * sigma * sigma));
 					norm += matrix[i][j];
+				}
+			}
+			if (norm != 0 && norm != 1)
+			{
+				for (int i = 0; i < n; i++)
+				{
+					for (int j = 0; j < m; j++)
+					{
+						matrix[i][j] /= norm;
+					}
 				}
 			}
 		}
 	}
-	if (!norm)
-		norm = 1.f;
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
-			int x_pix = limit_pixel(x-n/2, res.width());
-			int y_pix = limit_pixel(y-m/2, res.height());
+			int x_pix = limit_pixel(x - m / 2, res.width());
+			int y_pix = limit_pixel(y - n / 2, res.height());
 			float red = 0, green = 0, blue = 0;
 			for (int i = 0; i < n; i++)
 			{
@@ -147,9 +162,6 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 					blue += image.pixelColor(x_pix, y_pix).blue() * matrix[i][j];
 				}
 			}
-			red /= norm;
-			green /= norm;
-			blue /= norm;
 			red = limit_color(red);
 			green = limit_color(green);
 			blue = limit_color(blue);
@@ -160,12 +172,13 @@ QImage matrix(const QImage& image,std::string name_filt, char* name_file)
 	}
 	for (int i = 0; i < n; i++)
 		delete[] matrix[i];
+	delete[] matrix;
 	return res;
 }
 QImage GrayScale(const QImage& image)
 {
 	QImage res = image;
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
@@ -181,7 +194,7 @@ QImage GrayScale(const QImage& image)
 QImage Sephia(const QImage& image)
 {
 	QImage res = image;
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
@@ -196,7 +209,7 @@ QImage Sephia(const QImage& image)
 QImage Brigntness(const QImage& image)
 {
 	QImage res = image;
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
@@ -216,7 +229,7 @@ QImage Brigntness(const QImage& image)
 QImage median(const QImage& image)
 {
 	QImage res = image;
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
@@ -244,25 +257,47 @@ QImage median(const QImage& image)
 	}
 	return res;
 }
-QImage dilation(const QImage& image)
+QImage dilation(const QImage& image, char* name_file)
 {
+	char str[MAX_SIZE];
+	std::ifstream ifs(name_file);
+	ifs.getline(str, MAX_SIZE, '\n');
+	int n = str[0] - '0';
+	int m = str[2] - '0';
+	int** matrix = new int* [n];
+	for (int i = 0; i < n; i++)
+		matrix[i] = new int[m];
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < m; j++)
+		{
+			if (j != m - 1)
+				ifs.getline(str, MAX_SIZE, ' ');
+			else
+				ifs.getline(str, MAX_SIZE, '\n');
+			matrix[i][j] = std::atoi(str);
+		}
+	}
 	QImage res = image;
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
-			int x_pix = limit_pixel(x - med / 2, res.width());
-			int y_pix = limit_pixel(y - med / 2, res.height());
+			int x_pix = limit_pixel(x - m / 2, res.width());
+			int y_pix = limit_pixel(y - n / 2, res.height());
 			int red = 0, green = 0, blue = 0;
-			for (int i = 0; i < med; i++)
+			for (int i = 0; i < n; i++)
 			{
-				y_pix = limit_pixel(y - med / 2 + i, res.height());				
-				for (int j = 0; j < med; j++)
+				y_pix = limit_pixel(y - n / 2 + i, res.height());				
+				for (int j = 0; j < m; j++)
 				{
-					x_pix = limit_pixel(x - med / 2 + j, res.width());
-					red = max(red, image.pixelColor(x_pix, y_pix).red());
-					green = max(green, image.pixelColor(x_pix, y_pix).green());
-					blue = max(blue, image.pixelColor(x_pix, y_pix).blue());
+					if (matrix[i][j] != 0)
+					{
+						x_pix = limit_pixel(x - m / 2 + j, res.width());
+						red = max(red, image.pixelColor(x_pix, y_pix).red());
+						green = max(green, image.pixelColor(x_pix, y_pix).green());
+						blue = max(blue, image.pixelColor(x_pix, y_pix).blue());
+					}
 				}
 			}
 			QColor new_color;
@@ -272,25 +307,47 @@ QImage dilation(const QImage& image)
 	}
 	return res;
 }
-QImage erosion(const QImage& image)
+QImage erosion(const QImage& image, char* name_file)
 {
+	char str[MAX_SIZE];
+	std::ifstream ifs(name_file);
+	ifs.getline(str, MAX_SIZE, '\n');
+	int n = str[0] - '0';
+	int m = str[2] - '0';
+	int** matrix = new int* [n];
+	for (int i = 0; i < n; i++)
+		matrix[i] = new int[m];
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < m; j++)
+		{
+			if (j != m - 1)
+				ifs.getline(str, MAX_SIZE, ' ');
+			else
+				ifs.getline(str, MAX_SIZE, '\n');
+			matrix[i][j] = std::atoi(str);
+		}
+	}
 	QImage res = image;
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
-			int x_pix = limit_pixel(x - med / 2, res.width());
-			int y_pix = limit_pixel(y - med / 2, res.height());
+			int x_pix = limit_pixel(x - m / 2, res.width());
+			int y_pix = limit_pixel(y - n / 2, res.height());
 			int red = 255, green = 255, blue = 255;
-			for (int i = 0; i < med; i++)
+			for (int i = 0; i < n; i++)
 			{
-				y_pix = limit_pixel(y - med / 2 + i, res.height());
-				for (int j = 0; j < med; j++)
+				y_pix = limit_pixel(y - n / 2 + i, res.height());
+				for (int j = 0; j < m; j++)
 				{
-					x_pix = limit_pixel(x - med / 2 + j, res.width());
-					red = min(red, image.pixelColor(x_pix, y_pix).red());
-					green = min(green, image.pixelColor(x_pix, y_pix).green());
-					blue = min(blue, image.pixelColor(x_pix, y_pix).blue());
+					if (matrix[i][j] != 0)
+					{
+						x_pix = limit_pixel(x - m / 2 + j, res.width());
+						red = min(red, image.pixelColor(x_pix, y_pix).red());
+						green = min(green, image.pixelColor(x_pix, y_pix).green());
+						blue = min(blue, image.pixelColor(x_pix, y_pix).blue());
+					}
 				}
 			}
 			QColor new_color;
@@ -303,7 +360,7 @@ QImage erosion(const QImage& image)
 QImage waves(const QImage& image)
 {
 	QImage res = image;
-	for (int k = 0; k < res.width(); k++)
+	for (int k = 0; k < res.width() * 0.5; k++)
 	{
 		for (int l = 0; l < res.height(); l++)
 		{
@@ -338,8 +395,8 @@ QImage transfer(const QImage& image)
 QImage turn(const QImage& image)
 {
 	QImage res = image;
-	int x0 = res.width() / 2;
-	int y0 = res.height() / 2;
+	int x0 = res.width() * 0.5;
+	int y0 = res.height() * 0.5;
 	for (int k = 0; k < res.width(); k++)
 	{
 		for (int l = 0; l < res.height(); l++)
@@ -373,7 +430,7 @@ QImage lin_gist(const QImage& image)
 			bMin = min(bMin, image.pixelColor(x, y).blue());
 		}
 	}
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
@@ -397,7 +454,7 @@ QImage perfect_refl(const QImage& image)
 			bMax = max(bMax, image.pixelColor(x, y).blue());
 		}
 	}
-	for (int x = 0; x < res.width(); x++)
+	for (int x = 0; x < res.width() * 0.5; x++)
 	{
 		for (int y = 0; y < res.height(); y++)
 		{
@@ -406,5 +463,114 @@ QImage perfect_refl(const QImage& image)
 			res.setPixelColor(x, y, new_color);
 		}
 	}
+	return res;
+}
+QImage sobel_filt(const QImage& image, char* name_file1, char* name_file2)
+{
+	QImage res = image;
+	char str[MAX_SIZE];
+	std::ifstream ifsX(name_file1);
+	ifsX.getline(str, MAX_SIZE, '\n');
+	int nX = str[0] - '0';
+	int mX = str[2] - '0';
+	int normX = 0;
+	int** matrixX = new int* [nX];
+	for (int i = 0; i < nX; i++)
+		matrixX[i] = new int[mX];
+	for (int i = 0; i < nX; i++)
+	{
+		for (int j = 0; j < mX; j++)
+		{
+			if (j != mX - 1)
+				ifsX.getline(str, MAX_SIZE, ' ');
+			else
+				ifsX.getline(str, MAX_SIZE, '\n');
+			matrixX[i][j] = std::atoi(str);
+			normX += matrixX[i][j];
+		}
+	}
+	if (normX != 0 && normX != 1)
+	{
+		for (int i = 0; i < nX; i++)
+		{
+			for (int j = 0; j < mX; j++)
+			{
+				matrixX[i][j] /= normX;
+			}
+		}
+	}
+	std::ifstream ifsY(name_file2);
+	ifsY.getline(str, MAX_SIZE, '\n');
+	int nY = str[0] - '0';
+	int mY = str[2] - '0';
+	int normY = 0;
+	int** matrixY = new int* [nY];
+	for (int i = 0; i < nY; i++)
+		matrixY[i] = new int[mY];
+	for (int i = 0; i < nY; i++)
+	{
+		for (int j = 0; j < mY; j++)
+		{
+			if (j != mY - 1)
+				ifsY.getline(str, MAX_SIZE, ' ');
+			else
+				ifsY.getline(str, MAX_SIZE, '\n');
+			matrixY[i][j] = std::atoi(str);
+			normY += matrixY[i][j];
+		}
+	}
+	if (normY != 0 && normY != 1)
+	{
+		for (int i = 0; i < nY; i++)
+		{
+			for (int j = 0; j < mY; j++)
+			{
+				matrixY[i][j] /= normY;
+			}
+		}
+	}
+	for (int x = 0; x < res.width() * 0.5; x++)
+	{
+		for (int y = 0; y < res.height(); y++)
+		{
+			int x_pix = limit_pixel(x - mX / 2, res.width());
+			int y_pix = limit_pixel(y - nX / 2, res.height());
+			int redX = 0, greenX = 0, blueX = 0;
+			for (int i = 0; i < nX; i++)
+			{
+				y_pix = limit_pixel(y - nX + i / 2 + i, res.height());
+				for (int j = 0; j < mX; j++)
+				{
+					x_pix = limit_pixel(x - mX / 2 + j, res.width());
+					redX += image.pixelColor(x_pix, y_pix).red() * matrixX[i][j];
+					greenX += image.pixelColor(x_pix, y_pix).green() * matrixX[i][j];
+					blueX += image.pixelColor(x_pix, y_pix).blue() * matrixX[i][j];
+				}
+			}
+			x_pix = limit_pixel(x - mY / 2, res.width());
+			y_pix = limit_pixel(y - nY / 2, res.height());
+			int redY = 0, greenY = 0, blueY = 0;
+			for (int i = 0; i < nY; i++)
+			{
+				y_pix = limit_pixel(y - nY + i / 2 + i, res.height());
+				for (int j = 0; j < mY; j++)
+				{
+					x_pix = limit_pixel(x - mY / 2 + j, res.width());
+					redY += image.pixelColor(x_pix, y_pix).red() * matrixY[i][j];
+					greenY += image.pixelColor(x_pix, y_pix).green() * matrixY[i][j];
+					blueY += image.pixelColor(x_pix, y_pix).blue() * matrixY[i][j];
+				}
+			}
+			QColor new_color;
+			new_color.setRgb(limit_color(sqrt(redX * redX + redY * redY)), limit_color(sqrt(greenX * greenX + greenY * greenY)), limit_color(sqrt(blueX * blueX + blueY * blueY)));
+			res.setPixelColor(x, y, new_color);
+		}
+	}
+	for (int i = 0; i < nX; i++)
+		delete[] matrixX[i];
+	delete[]matrixX;
+	for (int i = 0; i < nY; i++)
+		delete[] matrixY[i];
+	delete[]matrixY;
 	return res;
 }
