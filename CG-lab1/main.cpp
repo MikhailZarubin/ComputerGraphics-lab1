@@ -43,7 +43,10 @@ void main(int argc, char* argv[])
 	transfer(image).save("filt_images/transfer.jpg");
 	turn(image).save("filt_images/turn.jpg");
 	lin_gist(image_for_gist).save("filt_images/lin_gist.jpg");
-	perfect_refl(image_for_perfect_refl).save("filt_images/perfect_refl.jpg");
-	sobel_filt(image, "sobel_x.txt", "sobel_y.txt").save("filt_images/sobel_filt.jpg");
+	perfect_refl(image_for_perfect_refl).save("filt_images/perfect_refl.jpg");	
 	matrix(image, "Gauss").save("filt_images/gauss.jpg");
+	sobel_filt(image, "sobel_x.txt", "sobel_y.txt").save("filt_images/sobel_filt.jpg");
+	QImage gradPH = grad(image, "matmorf_struct_elem.txt"); 
+	gradPH.save("filt_images/grad.jpg");
+	invers(gradPH).save("filt_images/grad_invers.jpg");
 }

@@ -574,3 +574,53 @@ QImage sobel_filt(const QImage& image, char* name_file1, char* name_file2)
 	delete[]matrixY;
 	return res;
 }
+QImage grad(const QImage& image, char* file_name)
+{
+	QImage res = image;
+	std::ifstream ifs (file_name);
+	char str[MAX_SIZE];
+	ifs.getline(str, MAX_SIZE, '\n');
+	int n = str[0] - '0';
+	int m = str[0] - '0';
+	int** matrix = new int* [n];
+	for (int i = 0; i < n; i++)
+	{
+		matrix[i] = new int[m];
+		for (int j = 0; j < m; j++)
+		{
+			if (j != m - 1)
+				ifs.getline(str, MAX_SIZE, ' ');
+			else
+				ifs.getline(str, MAX_SIZE, '\n');
+			matrix[i][j] = std::atoi(str);
+		}
+	}
+	for (int x = 0; x < res.width() * 0.5; x++)
+	{
+		for (int y = 0; y < res.height(); y++)
+		{
+			int x_pix = limit_pixel(x - m / 2, res.width());
+			int y_pix = limit_pixel(y - n / 2, res.height());
+			int minR = 255, minG = 255, minB = 255, maxR = 0, maxG = 0, maxB = 0;
+			for (int i = 0; i < n; i++)
+			{
+				y_pix = limit_pixel(y - n / 2 + i, res.height());
+				for (int j = 0; j < m; j++)
+				{
+					x_pix = limit_pixel(x - m / 2 + j, res.width());
+					minR = min(image.pixelColor(x_pix, y_pix).red(), minR);
+					minG = min(image.pixelColor(x_pix, y_pix).green(), minG);
+					minB = min(image.pixelColor(x_pix, y_pix).blue(), minB);
+					maxR = max(image.pixelColor(x_pix, y_pix).red(), maxR);
+					maxG = max(image.pixelColor(x_pix, y_pix).green(), maxG);
+					maxB = max(image.pixelColor(x_pix, y_pix).blue(), maxB);
+				}
+				QColor new_color;
+				new_color.setRgb(maxR - minR, maxG - minG, maxB - minB);
+				res.setPixelColor(x, y, new_color);
+
+			}
+		}
+	}
+	return res;
+}

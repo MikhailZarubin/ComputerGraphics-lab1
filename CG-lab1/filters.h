@@ -31,3 +31,4 @@ QImage turn(const QImage& image);
 QImage lin_gist(const QImage& image);
 QImage perfect_refl(const QImage& image);
 QImage sobel_filt(const QImage& image, char* file_name1, char* file_name2);
+QImage grad(const QImage& image, char* file_name);
